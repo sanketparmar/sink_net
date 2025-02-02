@@ -17,6 +17,9 @@
 #include <linux/kernel.h>
 #include <linux/proc_fs.h>
 
+#define SIOC_MODE_TX        (SIOCDEVPRIVATE+0)
+#define SIOC_MODE_RX        (SIOCDEVPRIVATE+1)
+
 /* Max chars in PROCFS tx status */
 #define PROCFS_TX_STATUS_SIZE 256
 /* Name of the PROCFS file entry */
@@ -24,6 +27,7 @@
 
 static DEFINE_SPINLOCK(status_update_lock);
 struct net_device *sink_ndev;
+static uint32_t mode = SIOC_MODE_TX;
 
 static int sink_net_open(struct net_device *dev)
 {
@@ -50,13 +54,20 @@ static int sink_net_xmit(struct sk_buff *skb, struct net_device *dev)
 {
 	unsigned long flags;
 
-	pr_info("%s called\n", __func__);
+	pr_info("%s called, mode: %d\n", __func__, (mode % SIOCDEVPRIVATE));
 
 	/* Take a update lock before updating values */
 	spin_lock_irqsave(&status_update_lock, flags);
-
-	dev->stats.tx_bytes += skb->len;
-	dev->stats.tx_packets++;
+	if (mode == SIOC_MODE_TX) {
+		/* Pass the packet to the hardware for transmission */
+		dev->stats.tx_bytes += skb->len;
+		dev->stats.tx_packets++;
+	} else {
+		/* Put the packet back into the network stack */
+		//netif_rx(skb);
+		dev->stats.rx_bytes += skb->len;
+		dev->stats.rx_packets++;
+	}
 
 	spin_unlock_irqrestore(&status_update_lock, flags);
 
@@ -64,6 +75,27 @@ static int sink_net_xmit(struct sk_buff *skb, struct net_device *dev)
 	dev_kfree_skb(skb);
 
 	return NETDEV_TX_OK;
+}
+
+static int sink_net_ioctl(struct net_device *dev, struct ifreq *ifr, void __user *data, int cmd)
+{
+	pr_info("ioctl: command: %x\n", cmd);
+	int ret = 0;
+
+	switch (cmd) {
+	case SIOC_MODE_TX:
+		mode = SIOC_MODE_TX;
+		pr_info("Mode updated to TX\n");
+		break;
+	case SIOC_MODE_RX:
+		mode = SIOC_MODE_RX;
+		pr_info("Mode updated to RX\n");
+		break;
+	default:
+		pr_err("Invalid IOCTL cmd: %d", cmd);
+		ret = -1;
+	}
+	return ret;
 }
 
 static ssize_t sink_net_proc_write(struct file *filp, const char __user *buffer,
@@ -93,8 +125,15 @@ static ssize_t sink_net_proc_write(struct file *filp, const char __user *buffer,
 	/* Take a update lock before updating values */
 	spin_lock_irqsave(&status_update_lock, flags);
 
-	sink_ndev->stats.tx_packets = packets;
-	sink_ndev->stats.tx_bytes = bytes;
+	if (mode == SIOC_MODE_TX) {
+		/* TX mode */
+		sink_ndev->stats.tx_packets = packets;
+		sink_ndev->stats.tx_bytes = bytes;
+	} else if (mode == SIOC_MODE_RX) {
+		/* RX mode */
+		sink_ndev->stats.rx_packets = packets;
+		sink_ndev->stats.rx_bytes = bytes;
+	}
 
 	spin_unlock_irqrestore(&status_update_lock, flags);
 
@@ -107,13 +146,22 @@ static ssize_t sink_net_proc_read(struct file *filp, char __user *buffer,
 					size_t length, loff_t *offset)
 {
 	int ret = 0;
+	int len = 0;
 	char tx_status_msg[PROCFS_TX_STATUS_SIZE];
 
 	if (*offset > 0)
 		return 0;
 
-	int len = sprintf(tx_status_msg, "Total transmited packet count: %ld (%ld bytes)",
+	if (mode == SIOC_MODE_TX)
+		len += sprintf(tx_status_msg + len, "Currently Running in mode: TX\n");
+	else if (mode == SIOC_MODE_RX)
+		len += sprintf(tx_status_msg + len, "Currently Running in mode: RX\n");
+
+	len += sprintf(tx_status_msg + len, "Total transmited packet count: %ld (%ld bytes)\n",
 		sink_ndev->stats.tx_packets, sink_ndev->stats.tx_bytes);
+	len += sprintf(tx_status_msg + len, "Total received packet count: %ld (%ld bytes)",
+		sink_ndev->stats.rx_packets, sink_ndev->stats.rx_bytes);
+
 	tx_status_msg[len++] = '\0';
 
 	ret = copy_to_user(buffer, tx_status_msg, len);
@@ -148,8 +196,9 @@ const struct net_device_ops sink_netdev_ops = {
 	.ndo_open = sink_net_open,
 	.ndo_stop = sink_net_release,
 	.ndo_start_xmit = sink_net_xmit,
+	//.ndo_do_ioctl = sink_net_ioctl,
+	.ndo_siocdevprivate = sink_net_ioctl,
 };
-
 
 static void sink_setup(struct net_device *dev)
 {
