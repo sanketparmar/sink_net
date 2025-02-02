@@ -136,7 +136,7 @@ int xfer_status(int type)
 {
         char buff[256];
 
-	int fd = open("/proc/sink_net_tx_status", O_RDWR | O_TRUNC);
+	int fd = open("/proc/sink_net_status", O_RDWR | O_TRUNC);
 	if(fd == -1) {
 		printf("Failed to open procfs file.\n");
 		return -1;

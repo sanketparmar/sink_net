@@ -3,13 +3,13 @@
  * transmitted to this interface will be discarded and status count
  * will be updated.
  *
- * This driver also exposed PROCFS file "sink_net_tx_status". Reading this
+ * This driver also exposed PROCFS file "sink_net_status". Reading this
  * file gives the details of transmitted packets.
  *
- * $ cat /proc/sink_net_tx_status
+ * $ cat /proc/sink_net_status
  * Total transmited packet count: 39 (4894 bytes)
  *
- * $ echo "0 0" > /proc/sink_net_tx_status
+ * $ echo "0 0" > /proc/sink_net_status
  * # first number represents packet counts and second number represents bytes.
  */
 #include <linux/module.h>
@@ -23,7 +23,7 @@
 /* Max chars in PROCFS tx status */
 #define PROCFS_TX_STATUS_SIZE 256
 /* Name of the PROCFS file entry */
-#define PROCFS_TX_STATUS_ENTRY "sink_net_tx_status"
+#define PROCFS_TX_STATUS_ENTRY "sink_net_status"
 
 static DEFINE_SPINLOCK(status_update_lock);
 struct net_device *sink_ndev;
@@ -224,7 +224,7 @@ static int __init sink_net_mod_init(void)
 	/* create procfs entry */
 	ent = proc_create(PROCFS_TX_STATUS_ENTRY, 0666, NULL, &proc_fops);
 	if (ent == NULL) {
-		pr_err("Failed to create sink_net_tx_status procfs entry.\n");
+		pr_err("Failed to create sink_net_status procfs entry.\n");
 		ret = -ENOENT;
 		goto err1;
 	}
@@ -240,7 +240,7 @@ err:
 static void __exit sink_net_mod_cleanup(void)
 {
 	pr_info("Cleaning up sink net module\n");
-	remove_proc_entry("sink_net_tx_status", NULL);
+	remove_proc_entry("sink_net_status", NULL);
 	unregister_netdev(sink_ndev);
 }
 

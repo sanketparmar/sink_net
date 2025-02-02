@@ -1,6 +1,6 @@
 **sink_net** driver creates a dummy network interface with sink0. All the packets transmitted to this interface will be discarded and the status count will be updated.
 
-This driver also exposed the PROCFS file "sink_net_tx_status".
+This driver also exposed the PROCFS file "sink_net_status".
 
 Reading this file gives the details of transmitted packets. Writing into this file will reset/update the packet counts and bytes.
 
@@ -25,13 +25,13 @@ To activate the interface
 or run the activate_interface.sh script.
 
 ### PROCFS entry  
-This module creates _sink_net_tx_status_ file in _/proc_ directory.
+This module creates _sink_net_status_ file in _/proc_ directory.
 
 ```
-$ cat /proc/sink_net_tx_status  
+$ cat /proc/sink_net_status  
 Total transmitted packet count: 39 (4894 bytes)
 
-$ echo "0 0" > /proc/sink_net_tx_status # to reset the counters. First number represents packet counts and second number represents bytes.
+$ echo "0 0" > /proc/sink_net_status # to reset the counters. First number represents packet counts and second number represents bytes.
 ```
 Or Compile and run test_procfs.c 
 
