@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* sink_net driver creates dummy interace with sink0. All the packaets
+/* sink_net driver creates dummy network interface with sink0. All the packets
  * transmitted to this interface will be discarded and status count
  * will be updated.
  *
@@ -8,6 +8,9 @@
  *
  * $ cat /proc/sink_net_tx_status
  * Total transmited packet count: 39 (4894 bytes)
+ *
+ * $ echo "0 0" > /proc/sink_net_tx_status
+ * # first number represents packet counts and second number represents bytes.
  */
 #include <linux/module.h>
 #include <linux/netdevice.h>
