@@ -242,6 +242,7 @@ static void __exit sink_net_mod_cleanup(void)
 	pr_info("Cleaning up sink net module\n");
 	remove_proc_entry("sink_net_status", NULL);
 	unregister_netdev(sink_ndev);
+	free_netdev(sink_ndev);
 }
 
 module_init(sink_net_mod_init);
