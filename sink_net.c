@@ -147,24 +147,24 @@ static ssize_t sink_net_proc_read(struct file *filp, char __user *buffer,
 {
 	int ret = 0;
 	int len = 0;
-	char tx_status_msg[PROCFS_TX_STATUS_SIZE];
+	char status_msg[PROCFS_TX_STATUS_SIZE];
 
 	if (*offset > 0)
 		return 0;
 
 	if (mode == SIOC_MODE_TX)
-		len += sprintf(tx_status_msg + len, "Currently Running in mode: TX\n");
+		len += sprintf(status_msg + len, "Currently Running in mode: TX\n");
 	else if (mode == SIOC_MODE_RX)
-		len += sprintf(tx_status_msg + len, "Currently Running in mode: RX\n");
+		len += sprintf(status_msg + len, "Currently Running in mode: RX\n");
 
-	len += sprintf(tx_status_msg + len, "Total transmited packet count: %ld (%ld bytes)\n",
+	len += sprintf(status_msg + len, "Total transmited packet count: %ld (%ld bytes)\n",
 		sink_ndev->stats.tx_packets, sink_ndev->stats.tx_bytes);
-	len += sprintf(tx_status_msg + len, "Total received packet count: %ld (%ld bytes)",
+	len += sprintf(status_msg + len, "Total received packet count: %ld (%ld bytes)",
 		sink_ndev->stats.rx_packets, sink_ndev->stats.rx_bytes);
 
-	tx_status_msg[len++] = '\0';
+	status_msg[len++] = '\0';
 
-	ret = copy_to_user(buffer, tx_status_msg, len);
+	ret = copy_to_user(buffer, status_msg, len);
 	if (ret) {
 		pr_err("Failed to copy buffer from kernel to user space. Total copied bytes: %d\n", len - ret);
 		return 0;
